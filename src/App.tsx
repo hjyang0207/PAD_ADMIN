@@ -1,0 +1,164 @@
+import { useEffect, useState, type ReactNode } from "react";
+import OwnerAccounts from "./views/OwnerAccounts";
+import OwnerQuota from "./views/OwnerQuota";
+import AdminDoctors from "./views/AdminDoctors";
+import AdminResponses from "./views/AdminResponses";
+import Login from "./views/Login";
+import { clearSession, restoreSession, saveSession, type ApiRole, type SignInResponse } from "./lib/auth";
+import ChangePassword from "./views/ChangePassword";
+
+type Role = "owner" | "admin";
+
+function toUiRole(role: ApiRole): Role {
+  return role === "ADMIN" ? "owner" : "admin";
+}
+
+interface NavItem {
+  key: string;
+  label: string;
+  icon: ReactNode;
+  view: ReactNode;
+}
+
+const icons = {
+  account: <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />,
+  quota: <path d="M3 3v18h18M18 17V9M13 17V5M8 17v-3" />,
+  doctor: <path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2ZM12 14v4M10 16h4" />,
+  board: <path d="M4 4h16v16H4zM4 9h16M9 9v11" />,
+};
+
+function Icon({ children }: { children: ReactNode }) {
+  return (
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      {children}
+    </svg>
+  );
+}
+
+const roleConfig: Record<Role, { badge: string; org: string; nav: NavItem[] }> = {
+  owner: {
+    badge: "관리자",
+    org: "완화의료 통합관리본부",
+    nav: [
+      { key: "accounts", label: "완화의료 계정 관리", icon: <Icon>{icons.account}</Icon>, view: <OwnerAccounts /> },
+      { key: "quota", label: "고유번호 할당 & 현황", icon: <Icon>{icons.quota}</Icon>, view: <OwnerQuota /> },
+    ],
+  },
+  admin: {
+    badge: "세브란스 어린이 병원",
+    org: "완화의료센터",
+    nav: [
+      { key: "doctors", label: "의사 관리 & 고유번호 발급", icon: <Icon>{icons.doctor}</Icon>, view: <AdminDoctors /> },
+      { key: "responses", label: "통합 응답 결과 게시판", icon: <Icon>{icons.board}</Icon>, view: <AdminResponses /> },
+    ],
+  },
+};
+
+export default function App() {
+  const restored = restoreSession();
+  const [role, setRole] = useState<Role | null>(() => (restored ? toUiRole(restored.role) : null));
+  const [mustChangePassword, setMustChangePassword] = useState(() => restored?.mustChangePassword ?? false);
+  const [active, setActive] = useState(0);
+  const [collapsed, setCollapsed] = useState(false);
+
+  const login = (session: SignInResponse) => {
+    saveSession(session);
+    setRole(toUiRole(session.role));
+    setMustChangePassword(session.mustChangePassword);
+    setActive(0);
+  };
+
+  const logout = () => {
+    clearSession();
+    setRole(null);
+    setMustChangePassword(false);
+  };
+
+  useEffect(() => {
+    window.addEventListener("pda:unauthorized", logout);
+    return () => window.removeEventListener("pda:unauthorized", logout);
+  }, []);
+
+  if (!role) return <Login onLogin={login} />;
+  if (mustChangePassword) return <ChangePassword onComplete={() => setMustChangePassword(false)} onLogout={logout} />;
+
+  const cfg = roleConfig[role];
+  const current = cfg.nav[Math.min(active, cfg.nav.length - 1)];
+
+  return (
+    <div className="flex h-full bg-[#F8FAFC] text-[#0F172A]">
+      {/* LNB */}
+      <aside className={`flex shrink-0 flex-col border-r border-[#E2E8F0] bg-white transition-[width] duration-200 ${collapsed ? "w-[76px]" : "w-[264px]"}`}>
+        <div className="flex h-16 items-center gap-2.5 border-b border-[#E2E8F0] px-5">
+          <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#2563EB] text-white">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+            </svg>
+          </div>
+          {!collapsed && (
+            <div className="leading-tight">
+              {role === "admin" ? (
+                <>
+                  <div className="text-[15px] font-bold tracking-[-0.02em]">완화의료</div>
+                  <div className="truncate text-[12px] font-medium text-[#64748B]">{cfg.org}</div>
+                </>
+              ) : (
+                <>
+                  <div className="text-[15px] font-bold tracking-[-0.02em]">Palliative</div>
+                  <div className="text-[12px] font-medium text-[#64748B]">Admin System</div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        <nav className="flex-1 space-y-1 p-3">
+          {!collapsed && <div className="px-3 pb-2 pt-3 text-[11px] font-semibold uppercase tracking-wider text-[#94A3B8]">Menu</div>}
+          {cfg.nav.map((item, i) => (
+            <button key={item.key} onClick={() => setActive(i)} title={item.label} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition-colors ${active === i ? "bg-[#DBEAFE] text-[#1E40AF]" : "text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A]"} ${collapsed ? "justify-center" : ""}`}>
+              {item.icon}
+              {!collapsed && <span className="truncate">{item.label}</span>}
+            </button>
+          ))}
+        </nav>
+
+        <button onClick={() => setCollapsed((c) => !c)} className="m-3 flex items-center justify-center gap-2 rounded-lg py-2 text-[13px] font-medium text-[#94A3B8] transition-colors hover:bg-[#F1F5F9] hover:text-[#334155]">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={collapsed ? "rotate-180" : ""}>
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+          {!collapsed && "사이드바 접기"}
+        </button>
+      </aside>
+
+      {/* Main column */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* GNB */}
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#E2E8F0] bg-white/80 px-6 backdrop-blur">
+          <div className="flex items-center gap-3">
+            {role !== "admin" && (
+              <>
+                <span className="rounded-full bg-[#DBEAFE] px-3 py-1 text-[13px] font-semibold text-[#1E40AF]">{cfg.badge}</span>
+                <span className="hidden text-[14px] font-medium text-[#334155] sm:block">{cfg.org}</span>
+              </>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="grid size-9 place-items-center rounded-full bg-[#0F172A] text-[13px] font-semibold text-white">{role === "owner" ? "OW" : "PC"}</div>
+
+            <button onClick={logout} className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-medium text-[#64748B] transition-colors hover:bg-[#F1F5F9] hover:text-[#9F1239]">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+              </svg>
+              로그아웃
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-y-auto p-6 lg:p-8">
+          <div className="mx-auto max-w-[1200px]">{current.view}</div>
+        </main>
+      </div>
+    </div>
+  );
+}
