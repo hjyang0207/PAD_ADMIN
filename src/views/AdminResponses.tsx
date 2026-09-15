@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { listStaffResults, type ResultBoardItem, type ResultBoardStats, type ResultCategory } from "../lib/adminApi";
-import { Button, Card, Table, Td, Th } from "../lib/ui";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getPdaResultPdf, listStaffResults, type ResultBoardItem, type ResultBoardStats, type ResultCategory } from "../lib/adminApi";
+import { Button, Card, Modal, Table, Td, Th } from "../lib/ui";
 
 const filters: { key: ResultCategory; label: string }[] = [
   { key: "ALL", label: "전체" },
@@ -16,54 +16,56 @@ const emptyStats: ResultBoardStats = {
 
 export default function AdminResponses() {
   const [category, setCategory] = useState<ResultCategory>("ALL");
-  const [allItems, setAllItems] = useState<ResultBoardItem[]>([]);
+  const [items, setItems] = useState<ResultBoardItem[]>([]);
+  const [stats, setStats] = useState<ResultBoardStats>(emptyStats);
+  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const pageSize = 20;
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [openingRecordId, setOpeningRecordId] = useState<number | null>(null);
+  const [pdfModalOpen, setPdfModalOpen] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const loadRequestId = useRef(0);
+  const pdfRequestId = useRef(0);
 
   const loadResults = useCallback(
     async (isRefresh = false) => {
+      const requestId = ++loadRequestId.current;
       if (isRefresh) setRefreshing(true);
       else setLoading(true);
       setError("");
       try {
-        const pageSize = 20;
-        const firstPage = await listStaffResults({ category: "ALL", page: 1, pageSize });
-        const allResults = [...firstPage.items];
-        const pageCount = Math.ceil(firstPage.total / pageSize);
-        for (let currentPage = 2; currentPage <= pageCount; currentPage += 1) {
-          const result = await listStaffResults({ category: "ALL", page: currentPage, pageSize });
-          allResults.push(...result.items);
-        }
-        setAllItems(allResults);
+        const result = await listStaffResults({ category, page, pageSize });
+        if (requestId !== loadRequestId.current) return;
+        setItems(result.items);
+        setStats(result.stats);
+        setTotal(result.total);
       } catch (err) {
+        if (requestId !== loadRequestId.current) return;
         setError(err instanceof Error ? err.message : "응답 목록을 불러오지 못했습니다.");
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (requestId === loadRequestId.current) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     },
-    [],
+    [category, page],
   );
 
   useEffect(() => {
     void loadResults();
   }, [loadResults]);
 
-  const filteredItems = useMemo(
-    () => category === "ALL" ? allItems : allItems.filter((item) => item.state === category),
-    [allItems, category],
-  );
-  const stats = useMemo<ResultBoardStats>(() => ({
-    totalIssuedCount: allItems.length,
-    responseCompletedCount: allItems.filter((item) => item.state === "COMPLETED").length,
-    unusedCount: allItems.filter((item) => item.state === "UNUSED").length,
-  }), [allItems]);
-  const total = filteredItems.length;
+  useEffect(() => {
+    return () => {
+      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    };
+  }, [pdfUrl]);
+
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
-  const items = filteredItems.slice((page - 1) * pageSize, page * pageSize);
 
   const selectCategory = (next: ResultCategory) => {
     setCategory(next);
@@ -75,6 +77,39 @@ export default function AdminResponses() {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
     return new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).format(date);
+  };
+
+  const openResultPdf = async (recordId: number | null) => {
+    if (recordId === null) {
+      setError("PDF 결과지의 응답 기록 ID를 확인할 수 없습니다.");
+      return;
+    }
+
+    const requestId = ++pdfRequestId.current;
+    setPdfUrl(null);
+    setPdfModalOpen(true);
+    setOpeningRecordId(recordId);
+    setError("");
+    try {
+      const pdf = await getPdaResultPdf(recordId);
+      if (requestId !== pdfRequestId.current) return;
+      const pdfBlob = pdf.type === "application/pdf" ? pdf : new Blob([pdf], { type: "application/pdf" });
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      setPdfUrl(pdfUrl);
+    } catch (err) {
+      if (requestId !== pdfRequestId.current) return;
+      setPdfModalOpen(false);
+      setError(err instanceof Error ? err.message : "PDF 결과지를 불러오지 못했습니다.");
+    } finally {
+      if (requestId === pdfRequestId.current) setOpeningRecordId(null);
+    }
+  };
+
+  const closeResultPdf = () => {
+    pdfRequestId.current += 1;
+    setPdfModalOpen(false);
+    setPdfUrl(null);
+    setOpeningRecordId(null);
   };
 
   return (
@@ -141,8 +176,13 @@ export default function AdminResponses() {
                   </Td>
                   <Td className="px-3 py-3 text-center">
                     {item.resultAvailable ? (
-                      <Button variant="outline" className="px-3 py-1.5 text-[12px]" onClick={() => setError("PDF 결과지 조회 API 명세가 필요합니다.")}>
-                        PDF
+                      <Button
+                        variant="outline"
+                        className="px-3 py-1.5 text-[12px]"
+                        disabled={openingRecordId === item.recordId}
+                        onClick={() => void openResultPdf(item.recordId)}
+                      >
+                        {openingRecordId === item.recordId ? "여는 중..." : "PDF"}
                       </Button>
                     ) : (
                       <span className="text-[13px] text-[#94A3B8]">—</span>
@@ -179,6 +219,16 @@ export default function AdminResponses() {
           </div>
         )}
       </Card>
+
+      <Modal open={pdfModalOpen} onClose={closeResultPdf} title="PDA 응답 결과 PDF" className="max-w-6xl">
+        <div className="h-[75vh] min-h-[420px] overflow-hidden rounded-xl border border-[#E2E8F0] bg-[#F8FAFC]">
+          {pdfUrl ? (
+            <iframe src={pdfUrl} title="PDA 응답 결과 PDF" className="h-full w-full border-0" />
+          ) : (
+            <div className="grid h-full place-items-center text-[14px] text-[#64748B]">PDF 결과지를 불러오는 중입니다...</div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

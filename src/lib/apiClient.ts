@@ -27,7 +27,9 @@ function getErrorMessage(status: number, payload: unknown) {
   if (status === 403) return "이 작업을 수행할 권한이 없습니다."
   if (status === 404) return "요청한 데이터를 찾을 수 없습니다."
   if (status === 409) return "이미 존재하거나 현재 상태에서는 처리할 수 없습니다."
+  if (status === 413) return "PDF로 출력할 내용이 너무 큽니다."
   if (status === 422) return "입력값을 다시 확인해주세요."
+  if (status === 503) return "결과 PDF를 불러오지 못했습니다. 잠시 후 다시 시도해주세요."
   return "요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
 }
 

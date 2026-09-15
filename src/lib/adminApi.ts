@@ -65,6 +65,7 @@ export interface ResultBoardItem {
   providerId: number | null;
   providerName: string | null;
   patientName: string | null;
+  registrationNumber: string | null;
   submittedAt: string | null;
   state: "COMPLETED" | "UNUSED";
   recordId: number | null;
@@ -478,6 +479,7 @@ export async function listStaffResults({ category = "ALL", page = 1, pageSize = 
       providerId: index + 1,
       providerName: response.doctor,
       patientName: response.patientInitial === "—" ? null : response.patientInitial,
+      registrationNumber: null,
       submittedAt: response.status === "completed" ? response.submittedAt : null,
       state: response.status === "completed" ? "COMPLETED" : "UNUSED",
       recordId: response.status === "completed" ? index + 1 : null,
@@ -499,4 +501,10 @@ export async function listStaffResults({ category = "ALL", page = 1, pageSize = 
   }
   const params = new URLSearchParams({ category, page: String(page), page_size: String(pageSize) });
   return apiRequest<ResultBoardResponse>(`/staff/results?${params.toString()}`);
+}
+
+export async function getPdaResultPdf(recordId: number): Promise<Blob> {
+  return apiRequestBlob(`/staff/results/${encodeURIComponent(recordId)}/pdf`, {
+    headers: { Accept: "application/pdf" },
+  });
 }

@@ -120,11 +120,13 @@ export function Modal({
   onClose,
   title,
   children,
+  className = "max-w-lg",
 }: {
   open: boolean
   onClose: () => void
   title: string
   children: React.ReactNode
+  className?: string
 }) {
   if (!open) return null
   return (
@@ -133,7 +135,7 @@ export function Modal({
         className="absolute inset-0 bg-[#0F172A]/40 backdrop-blur-[2px]"
         onClick={onClose}
       />
-      <div className="relative z-10 w-full max-w-lg rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-2xl">
+      <div className={`relative z-10 w-full rounded-2xl border border-[#E2E8F0] bg-white p-6 shadow-2xl ${className}`}>
         <div className="mb-5 flex items-start justify-between">
           <h3 className="text-[18px] font-bold text-[#0F172A]">{title}</h3>
           <button

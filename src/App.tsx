@@ -89,27 +89,14 @@ export default function App() {
     <div className="flex h-full bg-[#F8FAFC] text-[#0F172A]">
       {/* LNB */}
       <aside className={`flex shrink-0 flex-col border-r border-[#E2E8F0] bg-white transition-[width] duration-200 ${collapsed ? "w-[76px]" : "w-[264px]"}`}>
-        <div className="flex h-16 items-center gap-2.5 border-b border-[#E2E8F0] px-5">
-          <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#2563EB] text-white">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-            </svg>
+        <div className={`flex h-24 items-center overflow-hidden border-b border-[#E2E8F0] ${collapsed ? "justify-center px-3" : "px-5"}`}>
+          <div className={collapsed ? "flex h-16 w-11 items-center overflow-hidden" : "flex items-center"}>
+            <img
+              src="/severance-childrens-hospital-logo.png"
+              alt="세브란스 어린이병원"
+              className={collapsed ? "h-16 w-auto max-w-none -translate-x-1" : "h-[86px] w-auto"}
+            />
           </div>
-          {!collapsed && (
-            <div className="leading-tight">
-              {role === "admin" ? (
-                <>
-                  <div className="text-[15px] font-bold tracking-[-0.02em]">완화의료</div>
-                  <div className="truncate text-[12px] font-medium text-[#64748B]">{cfg.org}</div>
-                </>
-              ) : (
-                <>
-                  <div className="text-[15px] font-bold tracking-[-0.02em]">Palliative</div>
-                  <div className="text-[12px] font-medium text-[#64748B]">Admin System</div>
-                </>
-              )}
-            </div>
-          )}
         </div>
 
         <nav className="flex-1 space-y-1 p-3">
