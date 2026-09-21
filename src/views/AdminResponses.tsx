@@ -165,8 +165,8 @@ export default function AdminResponses() {
           </thead>
           <tbody>
             {!loading &&
-              items.map((item) => (
-                <tr key={item.codeId} className="transition-colors hover:bg-[#F8FAFC]">
+              items.map((item, index) => (
+                <tr key={(page - 1) * pageSize + index + 1} className="transition-colors hover:bg-[#F8FAFC]">
                   <Td className="px-3 py-3 text-[13px] font-medium text-[#0F172A]">{item.pin}</Td>
                   <Td className="px-3 py-3 text-[13px] text-[#334155]">{item.providerName ?? "—"}</Td>
                   <Td className="px-3 py-3 text-[13px] text-[#334155]">{item.patientName ?? "—"}</Td>

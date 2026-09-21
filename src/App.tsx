@@ -35,8 +35,9 @@ function Icon({ children }: { children: ReactNode }) {
   );
 }
 
-const roleConfig: Record<Role, { badge: string; org: string; nav: NavItem[] }> = {
+const roleConfig: Record<Role, { brand: string; badge: string; org: string; nav: NavItem[] }> = {
   owner: {
+    brand: "완화의료 통합 관리",
     badge: "관리자",
     org: "완화의료 통합관리본부",
     nav: [
@@ -45,8 +46,9 @@ const roleConfig: Record<Role, { badge: string; org: string; nav: NavItem[] }> =
     ],
   },
   admin: {
-    badge: "세브란스 어린이 병원",
-    org: "완화의료센터",
+    brand: "완화의료 관리",
+    badge: "완화의료",
+    org: "세브란스 어린이 병원",
     nav: [
       { key: "doctors", label: "의사 관리 & 고유번호 발급", icon: <Icon>{icons.doctor}</Icon>, view: <AdminDoctors /> },
       { key: "responses", label: "통합 응답 결과 게시판", icon: <Icon>{icons.board}</Icon>, view: <AdminResponses /> },
@@ -89,13 +91,9 @@ export default function App() {
     <div className="flex h-full bg-[#F8FAFC] text-[#0F172A]">
       {/* LNB */}
       <aside className={`flex shrink-0 flex-col border-r border-[#E2E8F0] bg-white transition-[width] duration-200 ${collapsed ? "w-[76px]" : "w-[264px]"}`}>
-        <div className={`flex h-24 items-center overflow-hidden border-b border-[#E2E8F0] ${collapsed ? "justify-center px-3" : "px-5"}`}>
-          <div className={collapsed ? "flex h-16 w-11 items-center overflow-hidden" : "flex items-center"}>
-            <img
-              src="/severance-childrens-hospital-logo.png"
-              alt="세브란스 어린이병원"
-              className={collapsed ? "h-16 w-auto max-w-none -translate-x-1" : "h-[86px] w-auto"}
-            />
+        <div className="flex h-16 shrink-0 items-center justify-center overflow-hidden border-b border-[#DCE7E5] bg-[#F0F7F6] px-3 text-center">
+          <div className={`font-bold tracking-[-0.03em] text-[#164E63] ${collapsed ? "text-[12px] leading-tight" : "text-[20px]"}`}>
+            {collapsed ? "완화의료" : cfg.brand}
           </div>
         </div>
 
@@ -122,12 +120,8 @@ export default function App() {
         {/* GNB */}
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-[#E2E8F0] bg-white/80 px-6 backdrop-blur">
           <div className="flex items-center gap-3">
-            {role !== "admin" && (
-              <>
-                <span className="rounded-full bg-[#DBEAFE] px-3 py-1 text-[13px] font-semibold text-[#1E40AF]">{cfg.badge}</span>
-                <span className="hidden text-[14px] font-medium text-[#334155] sm:block">{cfg.org}</span>
-              </>
-            )}
+            <span className="rounded-full bg-[#DBEAFE] px-3 py-1 text-[13px] font-semibold text-[#1E40AF]">{cfg.badge}</span>
+            <span className="hidden text-[14px] font-medium text-[#334155] sm:block">{cfg.org}</span>
           </div>
 
           <div className="flex items-center gap-3">

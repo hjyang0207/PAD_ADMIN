@@ -1,4 +1,5 @@
 {
+  "title": "통합관리서비스",
   "description": "Manage palliative care accounts and unique ID allocations with role-based access, real-time dashboards, and streamlined doctor management for healthcare admins.",
   "robots": {
     "index": false

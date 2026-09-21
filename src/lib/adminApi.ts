@@ -59,7 +59,8 @@ export interface ResultBoardStats {
 }
 
 export interface ResultBoardItem {
-  codeId: number;
+  // Unique number associated with patientName, not the result row ID.
+  codeId: number | null;
   pin: string;
   userId: number | null;
   providerId: number | null;
@@ -472,8 +473,12 @@ export async function getResponseDetail(id: string) {
 export async function listStaffResults({ category = "ALL", page = 1, pageSize = 20 }: { category?: ResultCategory; page?: number; pageSize?: number } = {}): Promise<ResultBoardResponse> {
   if (isMockApi()) {
     await delay();
+    const patientCodeIds = new Map(
+      [...new Set(mockResponses.map((response) => response.patientInitial).filter((name) => name !== "—"))]
+        .map((name, index) => [name, index + 1] as const),
+    );
     const mapped = mockResponses.map<ResultBoardItem>((response, index) => ({
-      codeId: index + 1,
+      codeId: patientCodeIds.get(response.patientInitial) ?? null,
       pin: response.pin,
       userId: response.status === "completed" ? index + 1 : null,
       providerId: index + 1,
